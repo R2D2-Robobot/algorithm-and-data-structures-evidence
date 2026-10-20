@@ -8,41 +8,34 @@ using namespace std;
 //Esta function permite reutilizar la posibilidad de ingresar una fecha, se reconoce que falta la comprobacion del input ingresado. Puesto que permite
 //ingresar numeros grandes.
 long long escribirCodigoFecha(){
-    cout << "Va a ingresar la fecha;" << endl;
-    string wow;
-    cout<<"ingrese el mes que desea buscar:"<<endl;
-    cin>>wow;
     long long codeinput;
-    string numdia;
-    string numhora;
-    cout<<"ingrese el dia que desea buscar"<<endl;
-    cin>>numdia;
-    cout<<"ingrese el hora que desea buscar"<<endl;
-    cin>>numhora;
-    string numin;
-    cout<<"ingrese el minuto que desea buscar"<<endl;
-    cin>>numin;
-    string numsec;
-    cout<<"ingrese el segundo que desea buscar"<<endl;
-    cin>>numsec;
+    string texto_mes;
+    int numero_mes;
+    int dia;
+    int hora;
+    int minuto;
+    int segundo;
+    char separador;
+    
+    cout << "Los meses se escriben con las primeras tres letras, comenzando por mayuscula, excepto por enero que es en minuscula" << endl;
+    cout << "Ingresa la fecha a buscar, con el siguiente formato mes dia hora:minuto:segundo" << endl;
+    cin >> texto_mes >> dia >> hora >> separador >> minuto >> separador >> segundo;
 
-    int numes;
-      if (wow=="ene" ){numes=1;}
-      else if (wow=="Feb" ){numes=2;}
-      else if (wow=="Mar" ){numes=3;}
-      else if (wow=="Abr" ){numes=4;}
-      else if (wow=="May" ){numes=5;}
-      else if (wow=="Jun" ){numes=6;}
-      else if (wow=="Jul" ){numes=7;}
-      else if (wow=="Ago" ){numes=8;}
-      else if (wow=="Sep" ){numes=9;}
-      else if (wow=="Oct" ){numes=10;}
-      else if (wow=="Nov" ){numes=11;}
-      else if (wow=="Dic" ){numes=12;}
-
+      if (texto_mes=="ene" ){numero_mes=1;}
+      else if (texto_mes=="Feb" ){numero_mes=2;}
+      else if (texto_mes=="Mar" ){numero_mes=3;}
+      else if (texto_mes=="Abr" ){numero_mes=4;}
+      else if (texto_mes=="May" ){numero_mes=5;}
+      else if (texto_mes=="Jun" ){numero_mes=6;}
+      else if (texto_mes=="Jul" ){numero_mes=7;}
+      else if (texto_mes=="Ago" ){numero_mes=8;}
+      else if (texto_mes=="Sep" ){numero_mes=9;}
+      else if (texto_mes=="Oct" ){numero_mes=10;}
+      else if (texto_mes=="Nov" ){numero_mes=11;}
+      else if (texto_mes=="Dic" ){numero_mes=12;}
     //Las fechas se transforman en digitos numericos de multiplos de 10, esto permite una comparacion directa y eficiente evitando realizar o sobre
     //cargar operadores.
-    codeinput=(numes *100000000)+(stoi(numdia)*1000000)+(stoi(numhora)*10000)+(stoi(numin)*100)+stoi(numsec);
+    codeinput = (numero_mes *100000000)+(dia*1000000)+(hora*10000)+(minuto*100)+segundo;
     cout << "Fecha Guardada con exito ;)" << endl;
     cout << "--------------------------------------" << endl;
     return codeinput;
@@ -164,7 +157,7 @@ int busquedaBinaria(long long B[], int n, long long l, long long r, int filtrado
 //Esta funcion recibe 2 fechas, decide cual de las dos es el lado izquierdo y cual el derecho, luego utiliza la funcion de busqueda binaria
 //para encontrar el registro mas cercano a la fecha de inicio. Luego itera hasta que un registro se encuentre fuera del rango.
 
-void busquedaRango(long long B[], int n, long long date1, long long date2, int filtrados[], string  A[]) {
+void busquedaRango(long long B[], int n, long long date1, long long date2, int filtrados[], string  A[], int index_range[], int &index_range_size) {
     //Inicia variables y decide cual de los dos numeros es menor y cual mayor con el objetivo de hacer una busqueda binaria
     long long date_lowervalue, date_uppervalue;
     if (date1 < date2){
@@ -179,7 +172,10 @@ void busquedaRango(long long B[], int n, long long date1, long long date2, int f
     
     while (isInRange(date_lowervalue, date_uppervalue, B[filtrados[first_date_index]])) {
         cout << "Found: " << A[filtrados[first_date_index]] << endl;
+        index_range[index_range_size]= filtrados[first_date_index];
+        index_range_size++;
         first_date_index++;
+
     }
 
 }
@@ -227,11 +223,9 @@ int main() {
     string  A[10000];
     long long B[10000];
     string  mes; 
+    int index_range[10000];
+    int index_range_size = 0;
     LectorYTraductor(archivo,n,A,B);
-
-    //for(i;i<n;i++){
-    //cout<<"|"<<A[i]<<"| "<<",";}
-    //cout<<""<<endl;
 
     int filtrados[10000];
     int cuantos = 0;
@@ -254,26 +248,24 @@ int main() {
         cout<<"|"<<B[pos]<<"| "<<",";
         cout << A[pos] << " (Clave: " << B[pos] << ")" << endl;
     }
-
     escribirArchivo(A, filtrados, n);
 
     long long codeinput1 = escribirCodigoFecha();
     long long codeinput2 = escribirCodigoFecha();
-    busquedaRango(B, n, codeinput1, codeinput2, filtrados, A);
-    //int index=busquedaBinaria(B,n,codeinput, filtrados);
-    //cout<<index<<endl;
-    //cout << "Renglón completo: " << A[index] << endl;
-
-    ofstream archivo2("lineas_filtradas.txt",ios::app);
     
-    //if (archivo2.is_open()) {
-        //archivo2 << A[index] << endl; // Escribe el renglón completo
-        //archivo2.close();             // Cerramos el flujo para guardar los cambios
-        //cout << "-> Guardado exitosamente en 'sample3.txt'." << endl;
-    //} 
-    //else{
-        //cout << "Error: No se pudo abrir el archivo para guardar." << endl;
-    //}
+    busquedaRango(B, n, codeinput1, codeinput2, filtrados, A, index_range, index_range_size);
+
+    cout << "Quieres guardar las lineas filtradas en un archivo? (y/n)" << endl;
+    char respuesta;
+    cin >> respuesta;
+
+    if (respuesta == 'y' || respuesta == 'Y'){
+        ofstream archivoSalida("resultados_busqueda.txt");
+        for (int i = 0; i < index_range_size; i++){
+            archivoSalida << A[index_range[i]] << "\n";
+        }
+        archivoSalida.close();
+    }
     
     return 0;
 }
