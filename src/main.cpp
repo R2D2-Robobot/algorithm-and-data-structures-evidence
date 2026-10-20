@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
 using namespace std;
 
 
@@ -41,7 +42,7 @@ long long escribirCodigoFecha(){
 
     //Las fechas se transforman en digitos numericos de multiplos de 10, esto permite una comparacion directa y eficiente evitando realizar o sobre
     //cargar operadores.
-      codeinput=(numes *100000000)+(stoi(numdia)*1000000)+(stoi(numhora)*10000)+(stoi(numin)*100)+stoi(numsec);
+    codeinput=(numes *100000000)+(stoi(numdia)*1000000)+(stoi(numhora)*10000)+(stoi(numin)*100)+stoi(numsec);
     cout << "Fecha Guardada con exito ;)" << endl;
     cout << "--------------------------------------" << endl;
     return codeinput;
@@ -59,23 +60,35 @@ void escribirArchivo(string A[], int filtrados[], int n){
 }
 
 
+/*Durante la iteracion anterior de este codigo ocurrio un bug, en donde los dias de 1 solo digito causaban un
+desacomodo en la forma en la que nuestro codigo esperaba recibir cada pieza del string, despues de leer mas a fondo el problema
+me encontre con la solucion. Usando la clase istrinstream podemos separar automaticamente cada pieza de la linea de acuerdo con el tipo
+de variable que nuestro codigo espera, de esta forma hacemos el parseo de los datos mas flexible. */
+
 //Esta funcion se encarga de recibir el archivo como parametro, un tamano de los arreglos e ir guardando las fechas transformadas en 
 //codigos con numeros long. Estos numeros long se guardan en un arrelo B, seran los utiilizados para arreglar los indices de los datos.
 void LectorYTraductor(ifstream &archivo, int &n, string A[], long long B[]) {
     string linea;
-    int mesint;
+    int mesint = 0;
     string dup;
+
+    //Variables de pieza del archivo (usados por istringstream)
+    string mes;
+    int dia;
+    int hora;
+    char sep; //Separador usado para recibir los dobles puntos
+    int minuto;
+    int segundo;
     while (getline(archivo, linea)) {
         size_t posicionR = linea.find("R:");
         if (posicionR != string::npos) {
             
             // 1. Guardamos la LÍNEA COMPLETA en A
             A[n] = linea; 
+            istringstream stream_linea(linea);
+            stream_linea >> mes >> dia >> hora >> sep >> minuto >> sep >> segundo;
 
-            // 2. Extraemos solo las 3 letras para asignar la clave numérica en B
-            //ahora se extrae tanto mes como dia, primero se bsuca crear el codigo y luego ese codigo guardarse en B 
-            string mes = linea.substr(0, 3);
-            if (mes == "ene" ) {mesint = 1; }
+            if (mes == "ene" )      {mesint = 1; }
             else if (mes == "Feb" ) { mesint = 2; }
             else if (mes == "Mar" ) { mesint = 3; }
             else if (mes == "Abr" ) { mesint = 4; }
@@ -88,29 +101,13 @@ void LectorYTraductor(ifstream &archivo, int &n, string A[], long long B[]) {
             else if (mes == "Nov" ) { mesint = 11; }
             else if (mes == "Dic") { mesint = 12 ; }
 
-            string dia=linea.substr(4,2);
-            if(dia[0]==' '){dia[0]='0';}
-   
-            
-            string hora=linea.substr(7,2);
-            if(hora[0]==' '){hora[0]='0';};
-
-            size_t pnt =linea.find(':');
-            size_t pnt_2=linea.find(':',pnt+1);
-
-            string minuto=linea.substr(pnt+1,pnt_2-pnt-1);
-
-            string segundo=linea.substr(pnt_2+1);
 
 
-            long long code=(mesint *100000000)+(stoi(dia)*1000000)+(stoi(hora)*10000)+(stoi(minuto)*100)+stoi(segundo);
+
+            long long code=(mesint *100000000)+(dia*1000000)+(hora*10000)+(minuto*100)+segundo;
 //code envez, de ser stoi debe ser stoll porque el codigo va a ser muy largo
 //también cambiar la lsita b a que reciba stoll en todo el codigo para evitar errores
             B[n]=code;
-            
-            
-
-
             n++;
         }
     }
@@ -230,18 +227,14 @@ int main() {
     string  A[10000];
     long long B[10000];
     string  mes; 
-
     LectorYTraductor(archivo,n,A,B);
 
     //for(i;i<n;i++){
     //cout<<"|"<<A[i]<<"| "<<",";}
     //cout<<""<<endl;
 
-
     int filtrados[10000];
     int cuantos = 0;
-   
-
  
     for (i = 0; i< n; i++)
     { // cout <<i << " " << A[i] << endl;
@@ -250,9 +243,10 @@ int main() {
     }
 
 
-       quicksort(B, 0, n - 1, filtrados); // Ascendente
+    quicksort(B, 0, n - 1, filtrados); // Ascendente
     cout << "\nVALORES ORDENADOS POR QUICK SORT (ASCENDENTE)" << endl;
     //Se puede cambiar libremente para debuggeo para imprimir todos, aunque el archivo ya lo hace.
+
     //Imprime los primeros 10
     for (i = 0; i < 10; i++) {   
         int pos = filtrados[i];
@@ -263,20 +257,15 @@ int main() {
 
     escribirArchivo(A, filtrados, n);
 
-
-      
-
-      
     long long codeinput1 = escribirCodigoFecha();
     long long codeinput2 = escribirCodigoFecha();
     busquedaRango(B, n, codeinput1, codeinput2, filtrados, A);
-      //int index=busquedaBinaria(B,n,codeinput, filtrados);
-      //cout<<index<<endl;
-      //cout << "Renglón completo: " << A[index] << endl;
+    //int index=busquedaBinaria(B,n,codeinput, filtrados);
+    //cout<<index<<endl;
+    //cout << "Renglón completo: " << A[index] << endl;
 
-      ofstream archivo2("sample3.txt",ios::app);
-
-      
+    ofstream archivo2("lineas_filtradas.txt",ios::app);
+    
     //if (archivo2.is_open()) {
         //archivo2 << A[index] << endl; // Escribe el renglón completo
         //archivo2.close();             // Cerramos el flujo para guardar los cambios
