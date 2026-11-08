@@ -4,6 +4,406 @@
 #include <sstream>
 using namespace std;
 
+
+int max(int a, int b){ return  (a >= b) ? a :  b; }
+
+const int CASE_OFFSET = 32;
+
+unsigned char toLowerAscii(char c) {
+    unsigned char u = static_cast<unsigned char>(c);
+    if (u >= 'A' && u <= 'Z') {
+        return static_cast<unsigned char>(u + CASE_OFFSET);
+    }
+    return u;
+}
+
+int compareStrings(const std::string& a, const std::string& b) {
+    size_t i = 0;
+    size_t j = 0;
+ 
+    while (true) {
+        // Skip spaces, without going past the end
+        while (i < a.size() && a[i] == ' ') i++;
+        while (j < b.size() && b[j] == ' ') j++;
+ 
+        bool endA = (i >= a.size());
+        bool endB = (j >= b.size());
+ 
+        if (endA && endB) return 0;  // both ended -> equal
+        if (endA) return 2;          // a ended first -> a is smaller
+        if (endB) return 1;          // b ended first -> b is smaller
+ 
+        unsigned char ca = toLowerAscii(a[i]);
+        unsigned char cb = toLowerAscii(b[j]);
+ 
+        if (ca != cb) {
+            return (ca > cb) ? 1 : 2;
+        }
+        i++;
+        j++;
+    }
+}
+
+template <typename T>
+class NodeTree 
+{	public: 
+		T data;
+
+		NodeTree *left, *right, *up ;
+
+		int altura;		//	altura maxima del subarbol
+		int factorB;	//	factor de balanceo
+	
+		NodeTree(T value)
+		{	data = value;
+			left = NULL;
+			right = NULL;
+			up = NULL;
+
+			altura = 1;		//	valores default
+			factorB = 0;
+		}
+};
+
+template <typename T>
+class AVL 
+{	   	
+	public:	
+	NodeTree<T> *root;
+
+	AVL(  )
+	{	root = NULL; 	}
+
+
+	int getAltura( NodeTree<T>* nodo)
+	{	//	Si nodo no es null, 
+		//		devuelve su altura
+		//	Si no, devuelve 0
+		if ( nodo != NULL)
+		{	return nodo->altura;	}
+		else
+		{	return 0; }
+	}
+
+	int getFactorB( NodeTree<T>* nodo)
+	{	//	Si el nodo no es null
+		//		Devuelve getAltura de right - getAltura de left  
+		//	Si no, devuelve 0
+		if ( nodo != NULL)
+		{	return getAltura(nodo->right) - getAltura(nodo->left);	}
+		else
+		{	return 0; }
+	}
+
+	NodeTree<T>* rotaRight( NodeTree<T> *Z )
+	{	//	   Z                      Y
+		//	  /                      / \
+		//	 Y     convertido en    X   Z
+		//	/  \                       /
+		// X   aux	                  aux
+
+		//	Y es el hijo izq de Z
+        NodeTree<T>* Y = Z->left;
+		//	aux es el hijo derecho de Y (ve los diagramas)
+        NodeTree<T>* aux = Y->right;
+		//	Z se convierte en hijo derecho de Y
+        Y->right = Z;
+		//	aux se reacomoda a la izquierda de Z
+        Z->left = aux;
+
+
+		//	Actualiza ademas... 
+		//	quien es el nuevo padre de Y? 
+        Y->up = Z->up;
+		//	quien es el nuevo padre de Z? 
+        Z->up = Y;
+		//	quien es el nuevo padre de aux? 
+        
+        if(aux != NULL)
+        {
+            aux->up = Z;
+        }
+		//	Actualiza la altura y factor del subarbol para Z  
+		//	Actualiza la altura y factor del subarbol para Y	
+
+        Z->altura = 1 + max(getAltura(Z->left),getAltura(Z->right) );
+        int factor = getFactorB(Z);
+        Z->factorB = factor;
+
+		Y->altura = 1 + max(getAltura(Y->left), getAltura(Y->right));
+        Y->factorB = getFactorB(Y);
+
+		//	Devuelve la nueva raiz del subarbol... o sea... Y!
+		//	Recuerda reasignar el resultado ej. nodo = rotaRight(nodo)
+		return Y;
+	}
+
+
+
+	NodeTree<T>* rotaLeft( NodeTree<T> *Z )
+	{	//	  Z     convertido en    Y
+		//	   \                    / \
+		//      Y	               Z   X
+		// 	   /  \                 \
+		//	 aux   X                aux
+
+		// Misma logica de rotaLeft... pero al reves
+
+		//	Y es el hijo der de Z
+        NodeTree<T>* Y = Z->right;
+		//	aux es el hijo izquierdo de Y (ve los diagramas)
+        NodeTree<T>* aux = Y->left;
+		//	Z se convierte en hijo izquierdo de Y
+        Y->left = Z;
+		//	aux se reacomoda a la derecha de Z
+        Z->right = aux;
+
+
+		//	Actualiza ademas... 
+		//	quien es el nuevo padre de Y? 
+        Y->up = Z->up;
+		//	quien es el nuevo padre de Z? 
+        Z->up = Y;
+		//	quien es el nuevo padre de aux? 
+        
+        if(aux != NULL)
+        {
+            aux->up = Z;
+        }
+		//	Actualiza la altura y factor del subarbol para Z  
+		//	Actualiza la altura y factor del subarbol para Y	
+
+        Z->altura = 1 + max(getAltura(Z->left),getAltura(Z->right) );
+        int factor = getFactorB(Z);
+        Z->factorB = factor;
+
+		Y->altura = 1 + max(getAltura(Y->left), getAltura(Y->right));
+        Y->factorB = getFactorB(Y);
+
+		//	Devuelve la nueva raiz del subarbol... o sea... Y!
+		//	Recuerda reasignar el resultado ej. nodo = rotaRight(nodo)
+		return Y;
+
+	}
+
+
+	//	Funcion helper para llamar a insert desde fuera
+	void insert( T value)
+	{	cout << "Agregando:\t" << value << endl;	
+		root  = insert( this->root, value);		
+	}
+
+	//	Insert recursivo
+	NodeTree<T>* insert(NodeTree<T> *nodo, T value)
+	{	// agrega el nodo... 
+		if ( nodo == NULL  )
+		{	NodeTree<T> *nuevo = new NodeTree<T>(value); 
+			return nuevo;
+		}
+
+		if (value < nodo->data)
+		{	nodo->left = insert(nodo->left, value );  
+			nodo->left->up = nodo;
+		}
+		else
+		{	nodo->right = insert(nodo->right, value ); 
+			nodo->right->up = nodo;
+		}
+
+		//	Actualiza la altura de nodo
+		//	Actualiza el factor de nodo = der - left
+		nodo->altura = 1 + max(getAltura(nodo->left), getAltura(nodo->right) );
+		int factor = getFactorB(nodo);
+		nodo->factorB = factor; 
+
+		//	Balancear el arbol desde Z (nodo) : 
+		//	factor < -1 ??  hay mas nodos a la izq 
+		if(factor < -1)
+		{
+			//		Si Z->left tiene factor > 0 
+			if(getFactorB(nodo->left) > 0)
+			{
+				//		LR  -> rotaLeft(Z->left), rotaRight(Z)
+				nodo->left = rotaLeft(nodo->left);
+			} 
+			//		Si no
+			//		LL  -> rotaRight(Z)
+			nodo = rotaRight(nodo);
+		}
+		//	factor > 1 ?? hay mas nodos a la der
+		else if(factor > 1)
+		{
+			//		Si Z->right tiene factor < 0 
+			if(getFactorB(nodo->right) < 0)
+			{
+				//		RL  ->  rotaRight(Z->right), rotaLeft(Z)
+				nodo->right = rotaRight(nodo->right);
+			} 
+			//		Si no
+			//		RR  ->  rotaLeft(Z) 
+				nodo = rotaLeft(nodo);	
+		}	
+		return nodo;
+	}
+
+	NodeTree<T>* search(T value)
+	{
+    	NodeTree<T>* aux = this->root;
+
+    	while(aux != NULL)
+    	{
+        	if (aux->data == value)
+        	{
+            	cout << "valor encontrado: " << aux->data << endl;
+            	return aux;
+        	}
+        	else if(value < aux->data)
+        	{
+            	aux = aux->left;
+        	}
+        	else
+        	{
+            	aux = aux->right;
+        	}
+    	}
+    	return NULL;
+	}
+
+	NodeTree<T>* searchName(string value)
+	{
+    	NodeTree<T>* aux = this->root;
+
+    	while(aux != NULL)
+    	{
+        	if (aux->data.getOrderName() == value)
+        	{
+            	cout << "valor encontrado: " << aux->data << endl;
+            	return aux;
+        	}
+        	else if(value < aux->data.getOrderName())
+        	{
+            	aux = aux->left;
+        	}
+        	else
+        	{
+            	aux = aux->right;
+        	}
+    	}
+    	return NULL;
+	}
+
+
+
+	// 1. Función helper pública para llamar a delete desde fuera
+	void Delete(T value)
+	{
+		root = deleteNode(this->root, value);
+		cout << "Intento de eliminar " << value << " finalizado." << endl;
+	}
+
+	// 2. Delete recursivo
+	NodeTree<T>* deleteNode(NodeTree<T>* nodo, T value)
+	{
+		if (nodo == NULL)
+		{
+			return nodo; // No se encontró el valor
+		}
+
+		if (value < nodo->data)
+		{
+			nodo->left = deleteNode(nodo->left, value);
+			if (nodo->left != NULL) nodo->left->up = nodo;
+		}
+		else if (nodo->data < value)
+		{
+			nodo->right = deleteNode(nodo->right, value);
+			if (nodo->right != NULL) nodo->right->up = nodo;
+		}
+		else
+		{	// Casos 1 y 2: El nodo tiene un solo hijo o ningún hijo
+			if (nodo->left == NULL || nodo->right == NULL)
+			{
+				NodeTree<T>* hijo = (nodo->left != NULL) ? nodo->left : nodo->right;
+				// Si el hijo existe, actualizamos su puntero 'up'
+				if (hijo != NULL)
+				{
+					hijo->up = nodo->up;
+				}
+				delete nodo; // Liberamos la memoria
+				return hijo; // Retornamos el hijo para que el padre lo enlace
+			}
+			else
+			{
+				// Caso 3: El nodo tiene dos hijos
+				NodeTree<T>* predecesor = nodo->left;
+				while (predecesor->right != NULL)
+				{
+					predecesor = predecesor->right;
+				}
+				// Copiamos el dato del predecesor al nodo actual
+				nodo->data = predecesor->data;
+				// Mandamos a eliminar el nodo predecesor de donde estaba originalmente
+				nodo->left = deleteNode(nodo->left, predecesor->data);
+				if (nodo->left != NULL) nodo->left->up = nodo;
+			}
+		}
+		// Si el árbol tenía un solo nodo y lo eliminamos, retornamos NULL
+		if (nodo == NULL)
+		{
+			return nodo;
+		}
+
+		nodo->altura = 1 + max(getAltura(nodo->left), getAltura(nodo->right));
+		int factor = getFactorB(nodo);
+		nodo->factorB = factor;
+
+		// factor < -1 -> desbalance a la izquierda
+		if (factor < -1)
+		{
+			if (getFactorB(nodo->left) > 0)
+			{
+				// LR -> rotaLeft(Z->left), rotaRight(Z)
+				nodo->left = rotaLeft(nodo->left);
+			}
+			// LL -> rotaRight(Z)
+			return rotaRight(nodo);
+		}
+		// factor > 1 -> desbalance a la derecha
+		else if (factor > 1)
+		{
+			if (getFactorB(nodo->right) < 0)
+			{
+				// RL -> rotaRight(Z->right), rotaLeft(Z)
+				nodo->right = rotaRight(nodo->right);
+			}
+			// RR -> rotaLeft(Z)
+			return rotaLeft(nodo);
+		}
+		return nodo;
+	}
+
+	void show( )
+	{	cout << endl;
+		preorder(root, " ");		
+		cout << endl;
+	}
+
+	void printNode( NodeTree<T> *nodo, string ident )
+	{	
+		cout << ident << " |--" << nodo->data << " (h: " << nodo->altura;
+		cout << " fb: " << nodo->factorB << ") " << endl; 
+	}
+
+	void preorder( NodeTree<T> *nodo, string ident )
+	{	if (nodo != NULL)
+		{	printNode( nodo , ident);
+			preorder( nodo->left , ident + "\t" );
+			preorder( nodo->right, ident +"\t");
+		}
+	}
+};
+
+
 //========================== Declaracion Clase DOuble Linked List =========================
 // clase Node: un valor
 // y punteros a nodo previo y siguente
@@ -338,6 +738,32 @@ class LogEntry {
 
 };
 
+//====================================================================
+class OrderRestaurant {
+    private:
+    string order_name;
+    int accumulated_money;
+    int counter;
+
+
+
+    public:
+    OrderRestaurant(string n, int p) {
+        order_name = n;
+        accumulated_money = p;
+        counter = 0;
+    }
+
+
+    string getOrderName() { return order_name; }
+    int getPrice() { return accumulated_money; }
+
+	void addOrder(int p){
+		accumulated_money+= p;
+		counter++;
+		
+	}
+};
 
 // Esta funcion escribe el archivo de salida con las variables ya ordenadas, fuciona utilizando el arreglo de objetos A que y el arreglo de objetos
 //filtrados paraa escribir todas las lineas utilizando el respectivo indice.
@@ -350,7 +776,7 @@ de variable que nuestro codigo espera, de esta forma hacemos el parseo de los da
 
 //Esta funcion se encarga de recibir el archivo como parametro, un tamano de los arreglos e ir guardando las fechas transformadas en
 //codigos con numeros long. Estos numeros long se guardan en un arrelo B, seran los utiilizados para arreglar los indices de los datos.
-void LectorYTraductor(ifstream &archivo, ListDouble<LogEntry> &lista) {
+void LectorYTraductor(ifstream &archivo, ListDouble<LogEntry> &lista, AVL<OrderRestaurant> &arbol) {
     string linea;
     int mesint = 0;
     string dup;
@@ -363,6 +789,7 @@ void LectorYTraductor(ifstream &archivo, ListDouble<LogEntry> &lista) {
     string restaurant_name;
     string order;
     int price;
+
 
 
     char sep; //Separador usado para recibir los dobles puntos
@@ -408,13 +835,29 @@ void LectorYTraductor(ifstream &archivo, ListDouble<LogEntry> &lista) {
 //code envez, de ser stoi debe ser stoll porque el codigo va a ser muy largo
 //también cambiar la lsita b a que reciba stoll en todo el codigo para evitar errores
 
+
+
             LogEntry entry(code, fecha_str, restaurant_name, price, order);
+            OrderRestaurant restaurant_entry(entry.getOrderName(), entry.getPrice());
+            insertOrderTree(arbol, restaurant_entry);
+
             lista.insertLast(entry);
 
 
             //--------
 
         }
+    }
+}
+
+void insertOrderTree(AVL<OrderRestaurant> &arbol, OrderRestaurant entry) {
+
+    if (arbol.searchName(entry.getOrderName()) == NULL) {
+        arbol.insert(entry);
+        return;
+    }
+    else{
+		(arbol.searchName(entry.getOrderName()))->data.addOrder(entry.getPrice());
     }
 }
 
@@ -547,6 +990,8 @@ void buscarPorRestaurante(ListDouble<LogEntry> &datos, bool guardarArchivo) {
 }
 
 int main() {
+    AVL<OrderRestaurant> arbol;
+
     ifstream archivo("ordenes.txt");
     string linea;
     ListDouble<LogEntry> orders_without_order;
